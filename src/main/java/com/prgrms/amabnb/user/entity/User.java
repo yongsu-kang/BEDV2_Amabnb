@@ -1,6 +1,5 @@
 package com.prgrms.amabnb.user.entity;
 
-import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -10,12 +9,14 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
 import com.prgrms.amabnb.common.model.BaseEntity;
-import com.prgrms.amabnb.user.entity.vo.Email;
-import com.prgrms.amabnb.user.entity.vo.PhoneNumber;
+import com.prgrms.amabnb.common.vo.Email;
+import com.prgrms.amabnb.common.vo.PhoneNumber;
+import com.prgrms.amabnb.user.exception.UserInvalidValueException;
 
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -31,7 +32,7 @@ public class User extends BaseEntity {
     private static final int NAME_MAX_LENGTH = 20;
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
@@ -43,8 +44,6 @@ public class User extends BaseEntity {
     @Column(length = NAME_MAX_LENGTH, nullable = false)
     private String name;
 
-    private LocalDate birth;
-
     @Embedded
     private Email email;
 
@@ -52,73 +51,60 @@ public class User extends BaseEntity {
     private PhoneNumber phoneNumber;
 
     @Column(nullable = false)
-    private String imageUrl;
+    private String profileImgUrl;
 
     @Enumerated(EnumType.STRING)
     private UserRole userRole;
 
     @Builder
-    public User(Long id, String oauthId, String provider, String name, LocalDate birth,
-        Email email, PhoneNumber phoneNumber, String imageUrl, UserRole userRole) {
+    public User(Long id, String oauthId, String provider, String name, Email email, PhoneNumber phoneNumber,
+        String profileImgUrl, UserRole userRole) {
         setOauthId(oauthId);
         setName(name);
         setProvider(provider);
-        setImageUrl(imageUrl);
-        setBirth(birth);
+        setProfileImgUrl(profileImgUrl);
         this.id = id;
-        this.birth = birth;
         this.email = email;
         this.phoneNumber = phoneNumber;
         this.userRole = userRole;
     }
 
-    private void setImageUrl(String imageUrl) {
+    public boolean isSame(User user) {
+        return this.id.equals(user.id);
+    }
+
+    private void setProfileImgUrl(String imageUrl) {
         if (Objects.isNull(imageUrl) || imageUrl.isBlank()) {
-            throw new IllegalArgumentException();
+            throw new UserInvalidValueException("이미지 URL은 비어있을 수 없습니다.");
         }
-        this.imageUrl = imageUrl;
+        this.profileImgUrl = imageUrl;
     }
 
     private void setProvider(String provider) {
         if (Objects.isNull(provider) || provider.isBlank()) {
-            throw new IllegalArgumentException();
+            throw new UserInvalidValueException("제공자는 비어있을 수 없습니다.");
         }
         this.provider = provider;
     }
 
     private void setName(String name) {
         if (Objects.isNull(name) || name.isBlank()) {
-            throw new IllegalArgumentException();
+            throw new UserInvalidValueException("이름은 비어있을 수 없습니다.");
         }
 
         if (name.length() > NAME_MAX_LENGTH) {
-            throw new IllegalArgumentException();
+            throw new UserInvalidValueException(
+                "이름은 %d자 이하여야 합니다. 현재 이름 길이: %d".formatted(NAME_MAX_LENGTH, name.length())
+            );
         }
         this.name = name;
     }
 
     private void setOauthId(String oauthId) {
         if (Objects.isNull(oauthId) || oauthId.isBlank()) {
-            throw new IllegalArgumentException();
+            throw new UserInvalidValueException("인증 아이디는 비어있을 수 없습니다.");
         }
         this.oauthId = oauthId;
-    }
-
-    public Optional<LocalDate> getBirth() {
-        return Optional.ofNullable(birth);
-    }
-
-    private void setBirth(LocalDate birth) {
-        if (Objects.nonNull(birth)) {
-            validateBirth(birth);
-        }
-        this.birth = birth;
-    }
-
-    private void validateBirth(LocalDate birth) {
-        if (birth.isAfter(LocalDate.now())) {
-            throw new IllegalArgumentException();
-        }
     }
 
     public Optional<PhoneNumber> getPhoneNumber() {
